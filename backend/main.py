@@ -38,7 +38,9 @@ logging.basicConfig(level=logging.INFO)
 # -----------------------------
 def run_pipeline(df: pd.DataFrame, test_days: int = 60):
 
-    # Preprocessing
+    # -----------------------------
+    # PREPROCESSING
+    # -----------------------------
     df = convert_timestamp(df)
     df = set_time_index(df)
     df = handle_missing_values(df)
@@ -49,15 +51,17 @@ def run_pipeline(df: pd.DataFrame, test_days: int = 60):
     model = train_sarima_model(train_df)
     forecast = make_forecast(model, steps=len(test_df))
 
-    # Limit visualization
+    # Limit visualization to last 3 years
     train_df = train_df.last("3Y")
 
-    # Detect anomalies
+    # -----------------------------
+    # ANOMALY DETECTION
+    # -----------------------------
     anomaly_results, anomaly_count = detect_anomalies(model, test_df)
     anomalies = anomaly_results[anomaly_results["Anomaly"]]
 
     # -----------------------------
-    # Severity Calculation
+    # SEVERITY CALCULATION
     # -----------------------------
     severity_levels = []
     abs_residuals = anomaly_results["Residual"].abs()
@@ -78,6 +82,26 @@ def run_pipeline(df: pd.DataFrame, test_days: int = 60):
         else:
             severity_levels.append("High")
 
+    # -----------------------------
+    # STRUCTURED ANOMALY OBJECTS
+    # -----------------------------
+    anomaly_objects = [
+        {
+            "date": date.strftime("%Y-%m-%d"),
+            "actual": float(actual),
+            "predicted": float(predicted),
+            "residual": float(round(residual, 2)),
+            "severity": severity
+        }
+        for date, actual, predicted, residual, severity in zip(
+            anomalies.index,
+            anomalies["Actual"],
+            anomalies["Predicted"],
+            anomalies["Residual"],
+            severity_levels
+        )
+    ]
+
     return {
         # Graph Data
         "historical_dates": train_df.index.strftime("%Y-%m-%d").tolist(),
@@ -85,15 +109,10 @@ def run_pipeline(df: pd.DataFrame, test_days: int = 60):
         "forecast_dates": forecast.index.strftime("%Y-%m-%d").tolist(),
         "forecast_values": forecast.tolist(),
 
-        # Anomaly Data
+        # Clean Anomaly Objects (NEW FORMAT)
         "anomaly_count": int(anomaly_count),
-        "anomaly_dates": anomalies.index.strftime("%Y-%m-%d").tolist(),
-        "anomaly_actual": anomalies["Actual"].tolist(),
-        "anomaly_predicted": anomalies["Predicted"].tolist(),
-        "anomaly_residual": anomalies["Residual"].round(2).tolist(),
-        "severity": severity_levels
+        "anomalies": anomaly_objects
     }
-
 
 # -----------------------------
 # DEFAULT FORECAST
@@ -160,6 +179,43 @@ async def upload_and_detect(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
+        # ---- STANDARDIZE TIMESTAMP ----
+        if "Date" in df.columns:
+            df.rename(columns={"Date": "Date"}, inplace=True)
+        elif "ds" in df.columns:
+            df.rename(columns={"ds": "Date"}, inplace=True)
+        elif "Timestamp" in df.columns:
+            df.rename(columns={"Timestamp": "Date"}, inplace=True)
+        else:
+            raise ValueError("No valid timestamp column found")
+
+        # ---- STANDARDIZE TARGET ----
+        if "Page.Loads" in df.columns:
+            df.rename(columns={"Page.Loads": "Page.Loads"}, inplace=True)
+        elif "y" in df.columns:
+            df.rename(columns={"y": "Page.Loads"}, inplace=True)
+        elif "TrafficCount" in df.columns:
+            df.rename(columns={"TrafficCount": "Page.Loads"}, inplace=True)
+        else:
+            raise ValueError("No valid traffic column found")
+
+        # ---- FORCE NUMERIC ----
+        # ---- FORCE NUMERIC CLEANING ----
+        df["Page.Loads"] = (
+            df["Page.Loads"]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+            .str.strip()
+        )
+
+        df["Page.Loads"] = pd.to_numeric(df["Page.Loads"], errors="coerce")
+
+        # 🔥 Drop invalid rows
+        df = df.dropna(subset=["Page.Loads", "Date"])
+
+        # 🔥 Ensure dataset not empty
+        if df.empty:
+            raise ValueError("No valid numeric traffic data found after cleaning")
 
         if df.empty:
             return JSONResponse(

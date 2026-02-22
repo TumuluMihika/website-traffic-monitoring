@@ -1,8 +1,10 @@
-# src/config.py
-import os
+DATASET_TYPE = "real"
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(BASE_DIR, "data", "web_traffic.csv")
+DATA_PATHS = {
+    "synthetic": "data/synthetic.csv",
+    "real": "data/real.csv",
+    "old": "data/web_traffic.csv"
+}
 
-TIMESTAMP_COL = "Timestamp"
-TARGET_COL = "TrafficCount"
+TIMESTAMP_COL = "Date"
+TARGET_COL = "Page.Loads"

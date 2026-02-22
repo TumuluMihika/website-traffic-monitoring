@@ -3,48 +3,33 @@
 import pandas as pd
 import numpy as np
 
+def detect_anomalies(model, test_df, threshold_multiplier=2.0):
 
-def detect_anomalies(model, test_df: pd.DataFrame, threshold_multiplier: float = 1.2):
-    """
-    Detect anomalies using residual thresholding.
-    """
-
-    # Generate predictions
-    predictions = model.forecast(steps=len(test_df))
-
-    # Ensure predictions have same index
-    predictions.index = test_df.index
-
-    # If test_df is DataFrame, convert to Series
+    # Always force 1D series
     if isinstance(test_df, pd.DataFrame):
-        actual = test_df.squeeze()
+        test_series = test_df.iloc[:, 0]
     else:
-        actual = test_df
+        test_series = test_df
 
-    # Compute residuals
-    residuals = actual - predictions
+    test_series = pd.to_numeric(test_series, errors="coerce")
+    test_series = test_series.fillna(method="ffill")
 
-    # Compute thresholds
-    abs_residuals = np.abs(residuals)
-    threshold = np.percentile(abs_residuals, 95)
+    # Forecast EXACT same length as test_df
+    predictions = model.forecast(steps=len(test_series))
 
-    upper_threshold = threshold
-    lower_threshold = -threshold
+    residuals = test_series.values - predictions.values
 
-    # Create clean result dataframe
+    std_dev = np.std(residuals)
+    threshold = threshold_multiplier * std_dev
+
     results = pd.DataFrame({
-        "Actual": actual,
-        "Predicted": predictions,
+        "Actual": test_series.values,
+        "Predicted": predictions.values,
         "Residual": residuals
-    })
+    }, index=test_series.index)
 
-    # Flag anomalies
-    results["Anomaly"] = (
-        (results["Residual"] > upper_threshold) |
-        (results["Residual"] < lower_threshold)
-    )
+    results["Anomaly"] = abs(results["Residual"]) > threshold
 
-    anomaly_count = results["Anomaly"].sum()
+    anomaly_count = int(results["Anomaly"].sum())
 
     return results, anomaly_count
-

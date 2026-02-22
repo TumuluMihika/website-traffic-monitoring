@@ -1,7 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Website Traffic Monitoring Dashboard</title>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="styles.css">
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -11,119 +15,6 @@
 
     <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1f3c88, #1b2a4e);
-            color: white;
-        }
-
-        h1 {
-            text-align: center;
-            padding: 30px 0 10px 0;
-            font-size: 32px;
-            letter-spacing: 1px;
-        }
-
-        .container {
-            width: 92%;
-            max-width: 1200px;
-            margin: 20px auto 60px auto;
-        }
-
-        .card {
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
-        }
-
-        .upload-section {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-
-        input[type="file"] {
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            background: white;
-            color: black;
-        }
-
-        button {
-            padding: 12px 22px;
-            font-size: 15px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            color: white;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .stat-box {
-            flex: 1;
-            min-width: 200px;
-            background: rgba(255,255,255,0.12);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .stat-box h2 {
-            margin: 0;
-            font-size: 28px;
-        }
-
-        .stat-box p {
-            margin-top: 8px;
-            font-size: 14px;
-            opacity: 0.85;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            width: 100%;
-            height: 480px;
-        }
-
-        canvas {
-            background: white;
-            border-radius: 20px;
-        }
-
-        .chart-placeholder {
-            text-align: center;
-            padding: 80px 20px;
-            opacity: 0.6;
-            font-size: 16px;
-        }
-
-        @media (max-width: 768px) {
-            .stats {
-                flex-direction: column;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -134,7 +25,7 @@
 
     <!-- Upload Section -->
     <div class="card upload-section">
-        <input type="file" id="fileInput">
+        <input type="file" id="fileInput" accept=".csv">
         <button onclick="uploadAndDetect()">Upload & Detect</button>
     </div>
 
@@ -146,7 +37,7 @@
         </div>
 
         <div class="stat-box">
-            <h2 id="forecastDays">30</h2>
+            <h2 id="forecastDays">60</h2>
             <p>Forecast Days</p>
         </div>
 
@@ -159,27 +50,27 @@
     <!-- Chart Section -->
     <div class="card">
         <div id="chartContainer">
+
+            <!-- Placeholder -->
             <div id="placeholder" class="chart-placeholder">
-                📁 Upload a CSV file and click <strong>Upload & Detect</strong> to visualize traffic data
+                📁 Upload a CSV file and click 
+                <strong>Upload & Detect</strong> 
+                to visualize traffic data
             </div>
 
+            <!-- Chart Area -->
             <div id="chartArea" style="display:none;">
                 <div class="chart-wrapper">
                     <canvas id="chart"></canvas>
                 </div>
             </div>
+
         </div>
     </div>
 
 </div>
 
-<script>
-    function showChart() {
-        document.getElementById("placeholder").style.display = "none";
-        document.getElementById("chartArea").style.display = "block";
-    }
-</script>
-
+<!-- JS File -->
 <script src="app.js"></script>
 
 </body>

@@ -46,18 +46,10 @@ function renderChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-
-            layout: {
-                padding: {
-                    right: 0
-                }
-            },
-
             interaction: {
                 mode: "nearest",
                 intersect: true
             },
-
             plugins: {
                 legend: { position: "top" },
                 zoom: {
@@ -68,21 +60,75 @@ function renderChart(data) {
                         mode: "x"
                     }
                 }
-            },
-
-            scales: {
-                x: {
-                    offset: false,
-                    ticks: {
-                        autoSkip: true,
-                        maxTicksLimit: 10
-                    }
-                }
             }
         }
     });
 
     showChart();
+}
+
+function plotAnomalies(data) {
+
+    const anomalyData = new Array(chart.data.labels.length).fill(null);
+    const pointColors = new Array(chart.data.labels.length).fill(null);
+
+    anomalyDetails = {};
+
+    data.anomalies.forEach((anomaly) => {
+
+        const labelIndex = chart.data.labels.indexOf(anomaly.date);
+
+        if (labelIndex !== -1) {
+            anomalyData[labelIndex] = anomaly.actual;
+
+            // 🎨 Severity-Based Colors
+            if (anomaly.severity === "Low") {
+                pointColors[labelIndex] = "#2ecc71"; // Green
+            } 
+            else if (anomaly.severity === "Medium") {
+                pointColors[labelIndex] = "#f39c12"; // Orange
+            } 
+            else {
+                pointColors[labelIndex] = "#e74c3c"; // Red
+            }
+
+            anomalyDetails[labelIndex] = anomaly;
+        }
+    });
+
+    chart.data.datasets.push({
+        label: "Anomalies",
+        data: anomalyData,
+        backgroundColor: pointColors,
+        borderColor: pointColors,
+        pointRadius: 8,
+        showLine: false
+    });
+
+    chart.options.onClick = function(evt, elements) {
+        if (elements.length > 0) {
+            const index = elements[0].index;
+
+            if (anomalyDetails[index]) {
+                const a = anomalyDetails[index];
+
+                Swal.fire({
+                    title: "Anomaly Detected",
+                    html: `
+                        <b>Date:</b> ${a.date}<br>
+                        <b>Actual:</b> ${a.actual}<br>
+                        <b>Predicted:</b> ${a.predicted}<br>
+                        <b>Residual:</b> ${a.residual}<br>
+                        <b>Severity:</b> ${a.severity}
+                    `,
+                    icon: a.severity === "High" ? "error" :
+                          a.severity === "Medium" ? "warning" : "info"
+                });
+            }
+        }
+    };
+
+    chart.update();
 }
 
 async function uploadAndDetect() {
@@ -111,38 +157,4 @@ async function uploadAndDetect() {
     plotAnomalies(data);
 
     document.getElementById("anomalyCount").innerText = data.anomaly_count;
-}
-
-function plotAnomalies(data) {
-
-    const anomalyData = new Array(chart.data.labels.length).fill(null);
-    anomalyDetails = {};
-
-    data.anomaly_dates.forEach((date, index) => {
-
-        const labelIndex = chart.data.labels.indexOf(date);
-
-        if (labelIndex !== -1) {
-            anomalyData[labelIndex] = data.anomaly_actual[index];
-
-            anomalyDetails[labelIndex] = {
-                date: date,
-                actual: data.anomaly_actual[index],
-                predicted: data.anomaly_predicted[index],
-                residual: data.anomaly_residual[index],
-                severity: data.severity[index]
-            };
-        }
-    });
-
-    chart.data.datasets.push({
-        label: "Anomalies",
-        data: anomalyData,
-        borderColor: "#e74c3c",
-        backgroundColor: "#e74c3c",
-        pointRadius: 8,
-        showLine: false
-    });
-
-    chart.update();
 }

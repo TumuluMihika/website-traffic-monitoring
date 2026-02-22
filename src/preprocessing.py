@@ -22,9 +22,9 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
 
 def resample_daily(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Resample traffic data to daily frequency (long-term forecasting).
+    Resample ONLY the target column to daily frequency.
     """
-    daily_df = df.resample("D").sum()
+    daily_df = df[[TARGET_COL]].resample("D").sum()
     return daily_df
 
 
